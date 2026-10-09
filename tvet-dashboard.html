@@ -1,0 +1,800 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>TVET Dashboard</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, "Segoe UI", system-ui, sans-serif;
+    background: #eef4f0;
+    color: #1f2328;
+    min-height: 100vh;
+  }
+
+  /* ─── App Shell ─── */
+  .app-shell {
+    display: flex;
+    flex-direction: row-reverse;
+    min-height: 100vh;
+  }
+
+  /* ─── Main Content (Right) ─── */
+  .main-area {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    padding: 24px 20px 48px;
+  }
+
+  /* ─── Sidebar (Left) ─── */
+  .sidebar {
+    width: 230px;
+    flex-shrink: 0;
+    background: #1a3a2a;
+    display: flex;
+    flex-direction: column;
+    padding: 0 0 24px;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+  }
+  .sidebar-brand {
+    padding: 22px 20px 18px;
+    border-bottom: 1px solid rgba(255,255,255,.1);
+  }
+  .sidebar-brand h2 {
+    font-size: 16px; font-weight: 700; color: #fff;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .sidebar-brand p {
+    font-size: 11px; color: rgba(255,255,255,.5);
+    margin-top: 4px;
+  }
+  .sidebar-badge {
+    display: inline-block;
+    margin: 14px 20px 0;
+    background: #2e7d52; color: #fff;
+    font-size: 11px; font-weight: 600;
+    padding: 5px 12px; border-radius: 20px;
+    white-space: nowrap;
+  }
+  .sidebar-section-label {
+    font-size: 10px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: .8px;
+    color: rgba(255,255,255,.35);
+    padding: 18px 20px 8px;
+  }
+  .nav-item {
+    display: flex; align-items: center; gap: 11px;
+    padding: 10px 20px;
+    font-size: 13px; font-weight: 500;
+    color: rgba(255,255,255,.7);
+    cursor: pointer;
+    border-left: 3px solid transparent;
+    transition: all .18s;
+    user-select: none;
+  }
+  .nav-item:hover {
+    background: rgba(255,255,255,.06);
+    color: #fff;
+  }
+  .nav-item.active {
+    background: rgba(46,125,82,.35);
+    color: #fff;
+    border-left-color: #4caf7d;
+    font-weight: 700;
+  }
+  .nav-icon { font-size: 16px; width: 22px; text-align: center; flex-shrink: 0; }
+  .nav-badge {
+    margin-left: auto;
+    background: #2e7d52; color: #fff;
+    font-size: 10px; font-weight: 700;
+    min-width: 18px; height: 18px;
+    border-radius: 9px; padding: 0 5px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .nav-badge.amber { background: #b7791f; }
+  .nav-badge.blue  { background: #2c5fa8; }
+  .sidebar-divider { border: none; border-top: 1px solid rgba(255,255,255,.09); margin: 10px 0; }
+
+  /* ─── Header ─── */
+  .header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 24px; flex-wrap: wrap; gap: 10px;
+  }
+  .header-left h1 { font-size: 20px; font-weight: 700; color: #1a3a2a; }
+  .header-left p  { font-size: 13px; color: #57606a; margin-top: 2px; }
+
+  /* ─── Panels ─── */
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  /* ─── Grid ─── */
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(310px, 1fr));
+    gap: 20px;
+  }
+
+  /* Card */
+  .card {
+    background: #fff; border-radius: 18px;
+    padding: 22px 24px;
+    box-shadow: 0 2px 10px rgba(0,0,0,.07);
+    display: flex; flex-direction: column; gap: 18px;
+  }
+  .card-header { display: flex; align-items: center; gap: 12px; }
+  .card-icon {
+    width: 44px; height: 44px; border-radius: 13px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px; flex-shrink: 0;
+  }
+  .icon-student  { background: #dff0e8; }
+  .icon-task     { background: #fef3dc; }
+  .icon-workshop { background: #e2edf8; }
+  .card-title { font-size: 16px; font-weight: 700; color: #1a3a2a; }
+  .card-sub   { font-size: 12px; color: #57606a; }
+
+  /* Stat row */
+  .stat-row { display: flex; gap: 8px; }
+  .stat-box  {
+    flex: 1; border-radius: 12px; padding: 11px 8px; text-align: center;
+  }
+  .stat-box .val { font-size: 22px; font-weight: 700; }
+  .stat-box .lbl { font-size: 10px; margin-top: 2px; }
+  .bg-green { background:#e8f5ee; } .bg-green .val { color:#2e7d52; } .bg-green .lbl { color:#4a9970; }
+  .bg-amber { background:#fff8e6; } .bg-amber .val { color:#b7791f; } .bg-amber .lbl { color:#c9922a; }
+  .bg-blue  { background:#e8f0fb; } .bg-blue  .val { color:#2c5fa8; } .bg-blue  .lbl { color:#4873c4; }
+  .bg-rose  { background:#fde8e8; } .bg-rose  .val { color:#c0392b; } .bg-rose  .lbl { color:#c44d4d; }
+
+  /* Section label */
+  .section-label {
+    font-size: 11px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .7px; color: #57606a; margin-bottom: 8px;
+  }
+
+  /* Knowledge bars */
+  .kb-row { display: flex; flex-direction: column; gap: 8px; }
+  .kb-item { display: flex; align-items: center; gap: 10px; }
+  .kb-name { font-size: 12px; color: #444; width: 118px; flex-shrink: 0; }
+  .kb-track { flex: 1; height: 8px; background: #eef4f0; border-radius: 99px; overflow: hidden; }
+  .kb-fill  { height: 100%; border-radius: 99px; }
+  .kb-pct   { font-size: 11px; font-weight: 600; color: #57606a; width: 30px; text-align: right; }
+
+  /* Performance pills */
+  .perf-grid { display: flex; gap: 7px; flex-wrap: wrap; }
+  .perf-pill {
+    font-size: 12px; padding: 4px 12px; border-radius: 20px;
+    font-weight: 600; cursor: default;
+  }
+  .pill-a { background:#e8f5ee; color:#2e7d52; }
+  .pill-b { background:#e8f0fb; color:#2c5fa8; }
+  .pill-c { background:#fff8e6; color:#b7791f; }
+  .pill-d { background:#fde8e8; color:#c0392b; }
+
+  /* Tabs */
+  .tabs { display: flex; gap: 6px; }
+  .tab-btn {
+    flex: 1; padding: 8px 0; border: none; border-radius: 9px;
+    font-size: 12px; font-weight: 600; cursor: pointer;
+    background: #f0f4f2; color: #57606a; transition: all .2s;
+  }
+  .tab-btn.active { background: #2e7d52; color: #fff; }
+  .tab-btn:hover:not(.active) { background: #dff0e8; color: #1a3a2a; }
+
+  /* Notes */
+  .notes-panel { display: flex; flex-direction: column; gap: 10px; }
+  .note-item {
+    background: #f9fafb;
+    border-left: 3px solid #2e7d52;
+    border-radius: 0 8px 8px 0;
+    padding: 10px 12px;
+  }
+  .note-item.amber { border-left-color: #e9a820; }
+  .note-item.blue  { border-left-color: #2c5fa8; }
+  .note-title { font-size: 13px; font-weight: 600; color: #1a3a2a; }
+  .note-desc  { font-size: 12px; color: #57606a; margin-top: 3px; }
+  .note-date  { font-size: 11px; color: #aaa; margin-top: 4px; }
+
+  /* Assessment table */
+  .assess-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .assess-table th {
+    text-align: left; padding: 7px 8px; background: #f0f4f2;
+    color: #57606a; font-weight: 600;
+  }
+  .assess-table td { padding: 8px 8px; border-bottom: 1px solid #f0f4f2; color: #333; }
+  .assess-table tr:last-child td { border-bottom: none; }
+  .grade {
+    display: inline-block; padding: 2px 9px; border-radius: 12px;
+    font-weight: 700; font-size: 11px;
+  }
+  .g-a { background:#e8f5ee; color:#2e7d52; }
+  .g-b { background:#e8f0fb; color:#2c5fa8; }
+  .g-c { background:#fff8e6; color:#b7791f; }
+  .g-x { background:#f0f4f2; color:#57606a; }
+
+  /* Checklist */
+  .checklist { display: flex; flex-direction: column; gap: 8px; }
+  .cl-item { display: flex; align-items: center; gap: 10px; }
+  .cl-item input[type="checkbox"] {
+    width: 16px; height: 16px; accent-color: #2e7d52; cursor: pointer; flex-shrink: 0;
+  }
+  .cl-label { font-size: 13px; color: #333; line-height: 1.4; }
+  .cl-label.done { text-decoration: line-through; color: #aaa; }
+  .add-row { display: flex; gap: 8px; }
+  .add-input {
+    flex: 1; padding: 8px 10px; font-size: 13px;
+    border: 1px solid #d0ddd6; border-radius: 8px; outline: none;
+    background: #f9fafb; color: #1f2328;
+    font-family: inherit;
+  }
+  .add-input:focus { border-color: #2e7d52; background: #fff; }
+  .btn-add {
+    padding: 8px 14px; font-size: 13px; font-weight: 600;
+    background: #2e7d52; color: #fff; border: none; border-radius: 8px; cursor: pointer;
+    white-space: nowrap;
+  }
+  .btn-add:hover { background: #245f40; }
+
+  /* Workshop list */
+  .ws-list { display: flex; flex-direction: column; gap: 9px; }
+  .ws-item {
+    display: flex; align-items: center; justify-content: space-between;
+    background: #f9fafb; border-radius: 10px; padding: 10px 14px;
+  }
+  .ws-left { display: flex; align-items: center; gap: 10px; }
+  .ws-dot  { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .dot-open     { background: #2e7d52; }
+  .dot-progress { background: #e9a820; }
+  .dot-closed   { background: #c0392b; }
+  .dot-review   { background: #2c5fa8; }
+  .ws-name { font-size: 13px; font-weight: 600; color: #1a3a2a; }
+  .ws-info { font-size: 11px; color: #57606a; margin-top: 2px; }
+  .ws-badge {
+    font-size: 11px; font-weight: 600;
+    padding: 3px 10px; border-radius: 12px; white-space: nowrap;
+  }
+  .wb-open     { background:#e8f5ee; color:#2e7d52; }
+  .wb-progress { background:#fff8e6; color:#b7791f; }
+  .wb-closed   { background:#fde8e8; color:#c0392b; }
+  .wb-review   { background:#e8f0fb; color:#2c5fa8; }
+
+  /* Ring legend */
+  .ring-wrap { display: flex; align-items: center; gap: 18px; }
+  .ring-labels { display: flex; flex-direction: column; gap: 5px; }
+  .ring-lbl { display: flex; align-items: center; gap: 7px; font-size: 12px; color: #444; }
+  .ring-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+
+  /* Buttons */
+  .btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
+  .btn {
+    padding: 8px 15px; font-size: 12px; font-weight: 600;
+    border: none; border-radius: 9px; cursor: pointer; transition: opacity .2s;
+  }
+  .btn:hover { opacity: .85; }
+  .btn-primary   { background:#2e7d52; color:#fff; }
+  .btn-secondary { background:#e8f0fb; color:#2c5fa8; }
+  .btn-warn      { background:#fff8e6; color:#b7791f; }
+  .btn-danger    { background:#fde8e8; color:#c0392b; }
+
+  /* Toast */
+  #toast {
+    position: fixed; bottom: 28px; left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: #1a3a2a; color: #fff; font-size: 13px; font-weight: 500;
+    padding: 10px 24px; border-radius: 22px;
+    transition: transform .3s ease, opacity .3s ease;
+    opacity: 0; pointer-events: none; z-index: 9999;
+  }
+  #toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+
+  /* Divider */
+  .divider { border: none; border-top: 1px solid #f0f4f2; }
+
+  /* Footer */
+  .footer {
+    margin-top: 36px;
+    text-align: center; font-size: 12px; color: #aaa;
+    border-top: 1px solid #e5e7eb; padding-top: 16px;
+  }
+
+  /* Responsive */
+  @media (max-width: 700px) {
+    .sidebar { width: 200px; }
+    .main-area { padding: 16px 12px 40px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="app-shell">
+
+  <!-- ─── Main Content (Left) ─── -->
+  <div class="main-area">
+
+    <!-- Header -->
+    <div class="header">
+      <div class="header-left">
+        <h1 id="panel-heading">🎓 TVET Dashboard</h1>
+        <p>Diploma in Business Studies &nbsp;·&nbsp; Academic Year 2024/2025</p>
+      </div>
+    </div>
+
+    <!-- ══ Panel: Overview ══ -->
+    <div class="panel active" id="panel-overview">
+      <div class="grid">
+
+        <!-- CARD 1 · STUDENTS -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-icon icon-student">👩‍🎓</div>
+            <div>
+              <div class="card-title">Students</div>
+              <div class="card-sub">Diploma in Business Studies</div>
+            </div>
+          </div>
+          <div class="stat-row">
+            <div class="stat-box bg-green"><div class="val">48</div><div class="lbl">Enrolled</div></div>
+            <div class="stat-box bg-amber"><div class="val">5</div><div class="lbl">At Risk</div></div>
+            <div class="stat-box bg-blue"><div class="val">42</div><div class="lbl">Active</div></div>
+            <div class="stat-box bg-rose"><div class="val">1</div><div class="lbl">Absent</div></div>
+          </div>
+          <hr class="divider"/>
+          <div>
+            <div class="section-label">Performance Overview</div>
+            <div class="perf-grid">
+              <span class="perf-pill pill-a">Excellent (A) · 14</span>
+              <span class="perf-pill pill-b">Good (B) · 18</span>
+              <span class="perf-pill pill-c">Average (C) · 11</span>
+              <span class="perf-pill pill-d">Below Avg · 5</span>
+            </div>
+          </div>
+          <div class="btn-row">
+            <button class="btn btn-primary"   onclick="toast('📄 Student report exported!')">📄 Export Report</button>
+            <button class="btn btn-secondary" onclick="toast('➕ Enrolment form opened!')">➕ Enrol Student</button>
+            <button class="btn btn-warn"      onclick="toast('⚠️ Alert sent to lecturer!')">⚠️ Alert Lecturer</button>
+          </div>
+        </div>
+
+        <!-- CARD 2 · WORKSHOP SUMMARY -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-icon icon-workshop">🏭</div>
+            <div>
+              <div class="card-title">Workshop Status</div>
+              <div class="card-sub">Facilities · Bookings · Occupancy</div>
+            </div>
+          </div>
+          <div class="stat-row">
+            <div class="stat-box bg-green"><div class="val">3</div><div class="lbl">Open</div></div>
+            <div class="stat-box bg-amber"><div class="val">2</div><div class="lbl">In Use</div></div>
+            <div class="stat-box bg-rose"><div class="val">1</div><div class="lbl">Closed</div></div>
+            <div class="stat-box bg-blue"><div class="val">1</div><div class="lbl">Review</div></div>
+          </div>
+          <hr class="divider"/>
+          <div>
+            <div class="section-label">Overall Occupancy</div>
+            <div class="ring-wrap">
+              <svg width="82" height="82" viewBox="0 0 82 82">
+                <circle cx="41" cy="41" r="31" fill="none" stroke="#eef4f0" stroke-width="10"/>
+                <circle cx="41" cy="41" r="31" fill="none" stroke="#2e7d52" stroke-width="10"
+                        stroke-dasharray="83.7 111.3" stroke-dashoffset="0"
+                        transform="rotate(-90 41 41)"/>
+                <circle cx="41" cy="41" r="31" fill="none" stroke="#e9a820" stroke-width="10"
+                        stroke-dasharray="55.8 139.2" stroke-dashoffset="-83.7"
+                        transform="rotate(-90 41 41)"/>
+                <circle cx="41" cy="41" r="31" fill="none" stroke="#c0392b" stroke-width="10"
+                        stroke-dasharray="27.9 167.1" stroke-dashoffset="-139.5"
+                        transform="rotate(-90 41 41)"/>
+                <circle cx="41" cy="41" r="31" fill="none" stroke="#2c5fa8" stroke-width="10"
+                        stroke-dasharray="27.9 167.1" stroke-dashoffset="-167.4"
+                        transform="rotate(-90 41 41)"/>
+                <text x="41" y="45" text-anchor="middle" font-size="12" font-weight="700" fill="#1a3a2a">7 WS</text>
+              </svg>
+              <div class="ring-labels">
+                <div class="ring-lbl"><div class="ring-dot" style="background:#2e7d52;"></div>Open · 3 rooms</div>
+                <div class="ring-lbl"><div class="ring-dot" style="background:#e9a820;"></div>In Use · 2 rooms</div>
+                <div class="ring-lbl"><div class="ring-dot" style="background:#c0392b;"></div>Closed · 1 room</div>
+                <div class="ring-lbl"><div class="ring-dot" style="background:#2c5fa8;"></div>Review · 1 room</div>
+              </div>
+            </div>
+          </div>
+          <div class="btn-row">
+            <button class="btn btn-primary"   onclick="toast('📅 Booking form opened!')">📅 Book Workshop</button>
+            <button class="btn btn-danger"    onclick="toast('🔧 Maintenance request submitted!')">🔧 Report Issue</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ══ Panel: Students ══ -->
+    <div class="panel" id="panel-students">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-icon icon-student">👩‍🎓</div>
+          <div>
+            <div class="card-title">Students</div>
+            <div class="card-sub">Diploma in Business Studies</div>
+          </div>
+        </div>
+        <div class="stat-row">
+          <div class="stat-box bg-green"><div class="val">48</div><div class="lbl">Enrolled</div></div>
+          <div class="stat-box bg-amber"><div class="val">5</div><div class="lbl">At Risk</div></div>
+          <div class="stat-box bg-blue"><div class="val">42</div><div class="lbl">Active</div></div>
+          <div class="stat-box bg-rose"><div class="val">1</div><div class="lbl">Absent</div></div>
+        </div>
+        <hr class="divider"/>
+        <div>
+          <div class="section-label">Level of Previous Knowledge</div>
+          <div class="kb-row">
+            <div class="kb-item">
+              <span class="kb-name">Accounting Basics</span>
+              <div class="kb-track"><div class="kb-fill" style="width:72%;background:#2e7d52;"></div></div>
+              <span class="kb-pct">72%</span>
+            </div>
+            <div class="kb-item">
+              <span class="kb-name">Business Comm.</span>
+              <div class="kb-track"><div class="kb-fill" style="width:85%;background:#2c5fa8;"></div></div>
+              <span class="kb-pct">85%</span>
+            </div>
+            <div class="kb-item">
+              <span class="kb-name">Economics</span>
+              <div class="kb-track"><div class="kb-fill" style="width:58%;background:#e9a820;"></div></div>
+              <span class="kb-pct">58%</span>
+            </div>
+            <div class="kb-item">
+              <span class="kb-name">IT Fundamentals</span>
+              <div class="kb-track"><div class="kb-fill" style="width:91%;background:#6b57d8;"></div></div>
+              <span class="kb-pct">91%</span>
+            </div>
+            <div class="kb-item">
+              <span class="kb-name">Marketing</span>
+              <div class="kb-track"><div class="kb-fill" style="width:63%;background:#c0392b;"></div></div>
+              <span class="kb-pct">63%</span>
+            </div>
+          </div>
+        </div>
+        <hr class="divider"/>
+        <div>
+          <div class="section-label">Performance Overview</div>
+          <div class="perf-grid">
+            <span class="perf-pill pill-a">Excellent (A) · 14</span>
+            <span class="perf-pill pill-b">Good (B) · 18</span>
+            <span class="perf-pill pill-c">Average (C) · 11</span>
+            <span class="perf-pill pill-d">Below Avg · 5</span>
+          </div>
+        </div>
+        <div>
+          <div class="section-label">Monthly Attendance Trend</div>
+          <svg width="100%" viewBox="0 0 290 76" style="overflow:visible;">
+            <defs>
+              <linearGradient id="gbar" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#2e7d52" stop-opacity=".85"/>
+                <stop offset="100%" stop-color="#2e7d52" stop-opacity=".25"/>
+              </linearGradient>
+            </defs>
+            <rect x="2"   y="17" width="33" height="49" rx="5" fill="url(#gbar)"/>
+            <rect x="45"  y="8"  width="33" height="58" rx="5" fill="url(#gbar)"/>
+            <rect x="88"  y="21" width="33" height="45" rx="5" fill="url(#gbar)"/>
+            <rect x="131" y="5"  width="33" height="61" rx="5" fill="url(#gbar)"/>
+            <rect x="174" y="12" width="33" height="54" rx="5" fill="url(#gbar)"/>
+            <rect x="217" y="28" width="33" height="38" rx="5" fill="url(#gbar)"/>
+            <text x="18"  y="76" text-anchor="middle" font-size="9" fill="#57606a">Jan</text>
+            <text x="61"  y="76" text-anchor="middle" font-size="9" fill="#57606a">Feb</text>
+            <text x="104" y="76" text-anchor="middle" font-size="9" fill="#57606a">Mar</text>
+            <text x="147" y="76" text-anchor="middle" font-size="9" fill="#57606a">Apr</text>
+            <text x="190" y="76" text-anchor="middle" font-size="9" fill="#57606a">May</text>
+            <text x="233" y="76" text-anchor="middle" font-size="9" fill="#57606a">Jun</text>
+            <text x="18"  y="13" text-anchor="middle" font-size="9" fill="#2e7d52" font-weight="700">87%</text>
+            <text x="61"  y="4"  text-anchor="middle" font-size="9" fill="#2e7d52" font-weight="700">92%</text>
+            <text x="104" y="17" text-anchor="middle" font-size="9" fill="#2e7d52" font-weight="700">84%</text>
+            <text x="147" y="1"  text-anchor="middle" font-size="9" fill="#2e7d52" font-weight="700">94%</text>
+            <text x="190" y="8"  text-anchor="middle" font-size="9" fill="#2e7d52" font-weight="700">90%</text>
+            <text x="233" y="24" text-anchor="middle" font-size="9" fill="#e9a820" font-weight="700">78%</text>
+          </svg>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-primary"   onclick="toast('📄 Student report exported!')">📄 Export Report</button>
+          <button class="btn btn-secondary" onclick="toast('➕ Enrolment form opened!')">➕ Enrol Student</button>
+          <button class="btn btn-warn"      onclick="toast('⚠️ Alert sent to lecturer!')">⚠️ Alert Lecturer</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ Panel: Tasks ══ -->
+    <div class="panel" id="panel-tasks">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-icon icon-task">📋</div>
+          <div>
+            <div class="card-title">Tasks</div>
+            <div class="card-sub">Notes · Assessment · Checklist</div>
+          </div>
+        </div>
+        <div class="tabs">
+          <button class="tab-btn active" id="tab-notes"     onclick="switchTab('notes')">📝 Notes</button>
+          <button class="tab-btn"        id="tab-assess"    onclick="switchTab('assess')">📊 Assessment</button>
+          <button class="tab-btn"        id="tab-checklist" onclick="switchTab('checklist')">✅ Checklist</button>
+        </div>
+        <!-- Notes panel -->
+        <div id="panel-notes" class="notes-panel">
+          <div class="note-item">
+            <div class="note-title">Module 3 – Financial Statements Recap</div>
+            <div class="note-desc">Students struggled with balance sheet reconciliation. Revise double-entry in next session.</div>
+            <div class="note-date">📅 12 Jun 2025 · Lecturer: Ms. Rafeah</div>
+          </div>
+          <div class="note-item amber">
+            <div class="note-title">Guest Lecture – Entrepreneurship</div>
+            <div class="note-desc">Invite local SME owner. Prepare Q&amp;A guide for students. Coordinate with industry liaison.</div>
+            <div class="note-date">📅 18 Jun 2025 · Coordinator: Mr. Farid</div>
+          </div>
+          <div class="note-item blue">
+            <div class="note-title">Attendance Policy Reminder</div>
+            <div class="note-desc">Students below 80% attendance must submit a written explanation to the Dean's office.</div>
+            <div class="note-date">📅 5 Jun 2025 · Admin Notice</div>
+          </div>
+          <div class="note-item">
+            <div class="note-title">Practical Assignment – Cash Flow</div>
+            <div class="note-desc">Assign real-company cash flow data for Batch B. Submission via e-learning portal.</div>
+            <div class="note-date">📅 22 Jun 2025 · Lecturer: Mr. Azri</div>
+          </div>
+          <div class="btn-row" style="margin-top:2px;">
+            <button class="btn btn-primary"   onclick="toast('📝 New note created!')">➕ Add Note</button>
+            <button class="btn btn-secondary" onclick="toast('☁️ Notes synced!')">☁️ Sync Notes</button>
+          </div>
+        </div>
+        <!-- Assessment panel -->
+        <div id="panel-assess" style="display:none;">
+          <div class="section-label">Assessment Schedule</div>
+          <table class="assess-table">
+            <thead>
+              <tr><th>Assessment</th><th>Type</th><th>Due</th><th>Avg</th><th>Grade</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>Mid-Term Exam</td><td>Written</td><td>15 Jun</td><td>71%</td><td><span class="grade g-b">B</span></td></tr>
+              <tr><td>Business Plan</td><td>Project</td><td>20 Jun</td><td>82%</td><td><span class="grade g-a">A</span></td></tr>
+              <tr><td>Case Study 2</td><td>Group</td><td>28 Jun</td><td>66%</td><td><span class="grade g-c">C</span></td></tr>
+              <tr><td>Oral Presentation</td><td>Individual</td><td>5 Jul</td><td>78%</td><td><span class="grade g-b">B</span></td></tr>
+              <tr><td>Final Examination</td><td>Written</td><td>25 Jul</td><td>—</td><td><span class="grade g-x">TBD</span></td></tr>
+            </tbody>
+          </table>
+          <div class="btn-row" style="margin-top:14px;">
+            <button class="btn btn-primary"   onclick="toast('📤 Schedule sent to students!')">📤 Send Schedule</button>
+            <button class="btn btn-warn"      onclick="toast('🔔 Reminder pushed!')">🔔 Remind Students</button>
+            <button class="btn btn-secondary" onclick="toast('📊 Result sheet downloaded!')">📊 Download Results</button>
+          </div>
+        </div>
+        <!-- Checklist panel -->
+        <div id="panel-checklist" style="display:none;">
+          <div class="section-label">To-Do Checklist</div>
+          <div class="checklist" id="checklist-list"></div>
+          <div class="add-row" style="margin-top:12px;">
+            <input class="add-input" id="cl-input" type="text" placeholder="Add a new task…"
+                   onkeydown="if(event.key==='Enter')addCheckItem()"/>
+            <button class="btn-add" onclick="addCheckItem()">Add</button>
+          </div>
+          <div class="btn-row" style="margin-top:12px;">
+            <button class="btn btn-primary"   onclick="clearDone()">🧹 Clear Done</button>
+            <button class="btn btn-secondary" onclick="toast('📋 Checklist exported!')">📋 Export</button>
+            <button class="btn btn-warn"      onclick="toast('📩 Checklist shared!')">📩 Share</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ Panel: Workshop ══ -->
+    <div class="panel" id="panel-workshop">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-icon icon-workshop">🏭</div>
+          <div>
+            <div class="card-title">Workshop Status</div>
+            <div class="card-sub">Facilities · Bookings · Occupancy</div>
+          </div>
+        </div>
+        <div class="stat-row">
+          <div class="stat-box bg-green"><div class="val">3</div><div class="lbl">Open</div></div>
+          <div class="stat-box bg-amber"><div class="val">2</div><div class="lbl">In Use</div></div>
+          <div class="stat-box bg-rose"><div class="val">1</div><div class="lbl">Closed</div></div>
+          <div class="stat-box bg-blue"><div class="val">1</div><div class="lbl">Review</div></div>
+        </div>
+        <hr class="divider"/>
+        <div>
+          <div class="section-label">Workshop Rooms</div>
+          <div class="ws-list">
+            <div class="ws-item">
+              <div class="ws-left"><div class="ws-dot dot-open"></div><div><div class="ws-name">WS-01 · Computer Lab A</div><div class="ws-info">40 seats · ICT / Business Software</div></div></div>
+              <span class="ws-badge wb-open">Open</span>
+            </div>
+            <div class="ws-item">
+              <div class="ws-left"><div class="ws-dot dot-progress"></div><div><div class="ws-name">WS-02 · Accounting Lab</div><div class="ws-info">30 seats · Financial Reporting · until 14:00</div></div></div>
+              <span class="ws-badge wb-progress">In Use</span>
+            </div>
+            <div class="ws-item">
+              <div class="ws-left"><div class="ws-dot dot-open"></div><div><div class="ws-name">WS-03 · Boardroom Suite</div><div class="ws-info">20 seats · Presentations &amp; Group Work</div></div></div>
+              <span class="ws-badge wb-open">Open</span>
+            </div>
+            <div class="ws-item">
+              <div class="ws-left"><div class="ws-dot dot-progress"></div><div><div class="ws-name">WS-04 · Entrepreneurship Hub</div><div class="ws-info">25 seats · Business Incubation · until 16:30</div></div></div>
+              <span class="ws-badge wb-progress">In Use</span>
+            </div>
+            <div class="ws-item">
+              <div class="ws-left"><div class="ws-dot dot-open"></div><div><div class="ws-name">WS-05 · Multimedia Studio</div><div class="ws-info">18 seats · Digital Marketing Lab</div></div></div>
+              <span class="ws-badge wb-open">Open</span>
+            </div>
+            <div class="ws-item">
+              <div class="ws-left"><div class="ws-dot dot-closed"></div><div><div class="ws-name">WS-06 · Simulation Room</div><div class="ws-info">Maintenance · Reopens 20 Jun 2025</div></div></div>
+              <span class="ws-badge wb-closed">Closed</span>
+            </div>
+            <div class="ws-item">
+              <div class="ws-left"><div class="ws-dot dot-review"></div><div><div class="ws-name">WS-07 · E-Commerce Lab</div><div class="ws-info">Safety inspection pending · 22 Jun 2025</div></div></div>
+              <span class="ws-badge wb-review">Review</span>
+            </div>
+          </div>
+        </div>
+        <hr class="divider"/>
+        <div>
+          <div class="section-label">Overall Occupancy</div>
+          <div class="ring-wrap">
+            <svg width="82" height="82" viewBox="0 0 82 82">
+              <circle cx="41" cy="41" r="31" fill="none" stroke="#eef4f0" stroke-width="10"/>
+              <circle cx="41" cy="41" r="31" fill="none" stroke="#2e7d52" stroke-width="10"
+                      stroke-dasharray="83.7 111.3" stroke-dashoffset="0" transform="rotate(-90 41 41)"/>
+              <circle cx="41" cy="41" r="31" fill="none" stroke="#e9a820" stroke-width="10"
+                      stroke-dasharray="55.8 139.2" stroke-dashoffset="-83.7" transform="rotate(-90 41 41)"/>
+              <circle cx="41" cy="41" r="31" fill="none" stroke="#c0392b" stroke-width="10"
+                      stroke-dasharray="27.9 167.1" stroke-dashoffset="-139.5" transform="rotate(-90 41 41)"/>
+              <circle cx="41" cy="41" r="31" fill="none" stroke="#2c5fa8" stroke-width="10"
+                      stroke-dasharray="27.9 167.1" stroke-dashoffset="-167.4" transform="rotate(-90 41 41)"/>
+              <text x="41" y="45" text-anchor="middle" font-size="12" font-weight="700" fill="#1a3a2a">7 WS</text>
+            </svg>
+            <div class="ring-labels">
+              <div class="ring-lbl"><div class="ring-dot" style="background:#2e7d52;"></div>Open · 3 rooms</div>
+              <div class="ring-lbl"><div class="ring-dot" style="background:#e9a820;"></div>In Use · 2 rooms</div>
+              <div class="ring-lbl"><div class="ring-dot" style="background:#c0392b;"></div>Closed · 1 room</div>
+              <div class="ring-lbl"><div class="ring-dot" style="background:#2c5fa8;"></div>Review · 1 room</div>
+            </div>
+          </div>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-primary"   onclick="toast('📅 Booking form opened!')">📅 Book Workshop</button>
+          <button class="btn btn-secondary" onclick="toast('📊 Workshop report ready!')">📊 View Report</button>
+          <button class="btn btn-danger"    onclick="toast('🔧 Maintenance request submitted!')">🔧 Report Issue</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">Made with IBM Bob</div>
+  </div><!-- /main-area -->
+
+  <!-- ─── Sidebar (Right) ─── -->
+  <div class="sidebar">
+    <div class="sidebar-brand">
+      <h2>🎓 TVET</h2>
+      <p>Diploma in Business Studies</p>
+    </div>
+    <span class="sidebar-badge">📅 Semester 2 Active</span>
+
+    <div class="sidebar-section-label">Menu Utama</div>
+    <div class="nav-item active" id="nav-overview" onclick="showPanel('overview', '🎓 TVET Dashboard', this)">
+      <span class="nav-icon">🏠</span> Gambaran Keseluruhan
+    </div>
+    <div class="nav-item" id="nav-students" onclick="showPanel('students', '👩‍🎓 Pelajar', this)">
+      <span class="nav-icon">👩‍🎓</span> Pelajar
+      <span class="nav-badge">48</span>
+    </div>
+    <div class="nav-item" id="nav-tasks" onclick="showPanel('tasks', '📋 Tugasan', this)">
+      <span class="nav-icon">📋</span> Tugasan
+      <span class="nav-badge amber">5</span>
+    </div>
+    <div class="nav-item" id="nav-workshop" onclick="showPanel('workshop', '🏭 Status Bengkel', this)">
+      <span class="nav-icon">🏭</span> Bengkel
+      <span class="nav-badge blue">7</span>
+    </div>
+
+    <hr class="sidebar-divider"/>
+    <div class="sidebar-section-label">Tindakan Pantas</div>
+    <div class="nav-item" onclick="toast('📄 Student report exported!')">
+      <span class="nav-icon">📄</span> Eksport Laporan
+    </div>
+    <div class="nav-item" onclick="toast('📅 Booking form opened!')">
+      <span class="nav-icon">📅</span> Tempah Bengkel
+    </div>
+    <div class="nav-item" onclick="toast('⚠️ Alert sent to lecturer!')">
+      <span class="nav-icon">⚠️</span> Amaran Pensyarah
+    </div>
+  </div><!-- /sidebar -->
+
+</div><!-- /app-shell -->
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<script>
+/* ── Panel Switcher ── */
+function showPanel(name, heading, el) {
+  ['overview','students','tasks','workshop'].forEach(function(p) {
+    var pan = document.getElementById('panel-' + p);
+    if (pan) pan.classList.toggle('active', p === name);
+    var nav = document.getElementById('nav-' + p);
+    if (nav) nav.classList.toggle('active', p === name);
+  });
+  document.getElementById('panel-heading').textContent = heading;
+}
+
+/* ── Tab Switcher (Tasks) ── */
+function switchTab(name) {
+  ['notes','assess','checklist'].forEach(function(t) {
+    document.getElementById('panel-' + t).style.display = (t === name) ? '' : 'none';
+    var btn = document.getElementById('tab-' + t);
+    if (btn) btn.classList.toggle('active', t === name);
+  });
+}
+
+/* ── Toast ── */
+function toast(msg) {
+  var el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(el._timer);
+  el._timer = setTimeout(function(){ el.classList.remove('show'); }, 2600);
+}
+
+/* ── Checklist ── */
+var checkItems = [
+  { text: 'Submit Module 3 lesson plan to coordinator', done: true  },
+  { text: 'Mark mid-term scripts – Batch A',            done: true  },
+  { text: 'Prepare guest lecture briefing pack',        done: false },
+  { text: 'Update student attendance register',         done: false },
+  { text: 'Book WS-03 for business plan review session',done: false },
+  { text: 'Send assessment schedule to all students',   done: false },
+  { text: 'Review practical assignment rubric',         done: false },
+];
+
+function renderChecklist() {
+  var list = document.getElementById('checklist-list');
+  list.innerHTML = '';
+  checkItems.forEach(function(item, idx) {
+    var row = document.createElement('div');
+    row.className = 'cl-item';
+    var cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.checked = item.done;
+    (function(i){ cb.onchange = function(){ checkItems[i].done = cb.checked; renderChecklist(); }; })(idx);
+    var lbl = document.createElement('span');
+    lbl.className = 'cl-label' + (item.done ? ' done' : '');
+    lbl.textContent = item.text;
+    row.appendChild(cb);
+    row.appendChild(lbl);
+    list.appendChild(row);
+  });
+}
+
+function addCheckItem() {
+  var inp = document.getElementById('cl-input');
+  var val = inp.value.trim();
+  if (!val) return;
+  checkItems.push({ text: val, done: false });
+  inp.value = '';
+  renderChecklist();
+  toast('✅ Task added!');
+}
+
+function clearDone() {
+  var before = checkItems.length;
+  checkItems = checkItems.filter(function(i){ return !i.done; });
+  var removed = before - checkItems.length;
+  renderChecklist();
+  toast(removed > 0 ? ('🧹 ' + removed + ' completed task(s) cleared!') : 'No completed tasks to clear.');
+}
+
+renderChecklist();
+</script>
+</body>
+</html>
